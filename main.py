@@ -105,8 +105,7 @@ def health():
 
 
 @app.get("/get-contract-types", response_class=HTMLResponse)
-def get_contract_types(category: str = "Business Contracts"):
-    contract_category = category  # alias for clarity
+def get_contract_types(contract_category: str = "Business Contracts"):
     print(f"DEBUG: Received category = {contract_category}")
     mapping = {
         "Business Contracts": [
