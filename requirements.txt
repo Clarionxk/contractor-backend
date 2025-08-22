@@ -3,7 +3,6 @@ uvicorn
 crewai
 openai
 crewai[tools]
-crewai==0.22.5
 langchain
 langchain_community
 langchain_openai 
