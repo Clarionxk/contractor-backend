@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 pydantic
-git+https://github.com/joaomdmoura/crewAI.git@main#egg=crewai --no-deps
 crewai-tools>=0.62.3
 langchain-openai
 python-dotenv
