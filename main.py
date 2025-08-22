@@ -103,8 +103,9 @@ def root():
 def health():
     return "ok"
 
+
 @app.get("/get-contract-types", response_class=HTMLResponse)
-def get_contract_types(contract_category: str):
+def get_contract_types(contract_category: str = "Business Contracts"):
     mapping = {
         "Business Contracts": [
             "Sales Contract",
@@ -122,7 +123,10 @@ def get_contract_types(contract_category: str):
         ],
     }
     types = mapping.get(contract_category, ["General Contract"])
-    return "".join(f"<option>{t}</option>" for t in types)
+    # Build actual <option> HTML tags
+    html_options = "".join([f"<option value='{t}'>{t}</option>" for t in types])
+    return HTMLResponse(content=html_options, status_code=200)
+
 
 @app.post("/generate", response_class=HTMLResponse)
 async def generate_contract(request: Request):
