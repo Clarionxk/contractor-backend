@@ -5,3 +5,4 @@ git+https://github.com/joaomdmoura/crewAI.git@main
 crewai-tools>=0.62.3
 langchain-openai
 python-dotenv
+embedchain==0.1.103
