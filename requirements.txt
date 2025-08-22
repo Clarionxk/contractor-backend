@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+crewai
 crewai-tools
 langchain-openai
 python-dotenv
