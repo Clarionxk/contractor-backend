@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
-from crewai_tools.tools.serper_dev_tool import SerperDevTool
+from crewai_tools import SerperDevTool
 
 
 # -------------------
