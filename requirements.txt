@@ -3,5 +3,5 @@ uvicorn[standard]
 pydantic
 crewai
 langchain-openai
-crewai-tools
+crewai-tools==0.1.7
 python-dotenv
