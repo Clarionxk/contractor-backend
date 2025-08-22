@@ -1,7 +1,7 @@
 fastapi
 uvicorn[standard]
 pydantic
-crewai>=0.28.0
+crewai==0.27.0
 crewai-tools>=0.62.3
 langchain-openai
 python-dotenv
