@@ -124,8 +124,8 @@ def get_contract_types(contract_category: str = "Business Contracts"):
         ],
     }
     types = mapping.get(contract_category, ["General Contract"])
-    html_options = "".join([f"<option value='{t}'>{t}</option>" for t in types])
-    return HTMLResponse(content=html_options, status_code=200)
+    return "".join(f"<option>{t}</option>" for t in types)
+
 
 
 
