@@ -3,14 +3,11 @@ import re
 import logging
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
-from typing import Optional
-from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
 from crewai_tools import SerperDevTool
-
 
 # -------------------
 # Load environment
@@ -105,41 +102,26 @@ def root():
 def health():
     return "ok"
 
-
-
-CATEGORIES = {
-    "business contracts": [
-        "Sales Contract",
-        "Partnership Agreement",
-        "Service Agreement",
-        "Independent Contractor Agreement",
-        "Non-Disclosure Agreement",
-    ],
-    "employment contracts": [
-        "Employment Agreement",
-        "Offer Letter",
-        "NDA (Mutual)",
-        "Consulting Agreement",
-        "Non-Compete Agreement",
-    ],
-}
-
 @app.get("/get-contract-types", response_class=HTMLResponse)
-def get_contract_types(
-    contract_category: Optional[str] = Query(None, alias="contract-category"),
-    category: Optional[str] = None,
-):
-    # accept both ?contract-category=... and ?contract_category=... or ?category=...
-    raw = contract_category or category
-    selected = (raw or "Business Contracts").strip().lower()
-
-    types = CATEGORIES.get(selected, CATEGORIES["business contracts"])
-    html_options = "".join(f"<option value=\"{t}\">{t}</option>" for t in types)
-    return HTMLResponse(content=html_options, status_code=200)
-
-
-
-
+def get_contract_types(contract_category: str):
+    mapping = {
+        "Business Contracts": [
+            "Sales Contract",
+            "Partnership Agreement",
+            "Service Agreement",
+            "Independent Contractor Agreement",
+            "Non-Disclosure Agreement",
+        ],
+        "Employment Contracts": [
+            "Employment Agreement",
+            "Offer Letter",
+            "NDA (Mutual)",
+            "Consulting Agreement",
+            "Non-Compete Agreement",
+        ],
+    }
+    types = mapping.get(contract_category, ["General Contract"])
+    return "".join(f"<option>{t}</option>" for t in types)
 
 @app.post("/generate", response_class=HTMLResponse)
 async def generate_contract(request: Request):
