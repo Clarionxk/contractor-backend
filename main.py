@@ -162,65 +162,71 @@ async def generate_contract(request: Request):
                 status_code=400,
             )
 
-    # -------------------
-    # CrewAI Pipeline
-    # -------------------
-    legal_task = Task(
-        description=f"List legal requirements for {ctype} in {country}.",
-        agent=law_expert,
-        expected_output="A bullet list of legal requirements."
-    )
-    draft_task = Task(
-        description=f"Draft a full {ctype} for {country}, based on user prompt:\n{prompt}",
-        agent=contract_connoisseur,
-        expected_output="A full draft contract."
-    )
-    review_task = Task(
-        description="Review and refine the draft, adding compliance notes.",
-        agent=proofreader,
-        expected_output="Reviewed contract + compliance notes."
-    )
-
-    crew = Crew(
-        agents=[law_expert, contract_connoisseur, proofreader],
-        tasks=[legal_task, draft_task, review_task],
-        process=Process.sequential,
-        verbose=True,
-    )
-
-    try:
-        logging.info("Starting CrewAI pipeline...")
-        result = crew.kickoff(inputs={"prompt": prompt})
-        outputs = {"legal": "", "draft": "", "review": "", "logs": ""}
-
-        tos = getattr(result, "tasks_output", None)
-        if isinstance(tos, list):
-            for i, t in enumerate(tos):
-                raw = getattr(t, "raw", None) or str(t)
-                if i == 0: 
-                    outputs["legal"] = raw
-                    logging.info(f"Legal requirements generated: {len(raw)} characters")
-                elif i == 1: 
-                    outputs["draft"] = raw
-                    logging.info(f"Draft contract generated: {len(raw)} characters")
-                elif i == 2: 
-                    outputs["review"] = raw
-                    logging.info(f"Contract review completed: {len(raw)} characters")
-            outputs["logs"] = str(result)
-
-        if not outputs["review"]:
-            outputs["review"] = getattr(result, "raw", str(result))
-
-        logging.info("Pipeline completed successfully")
-        return build_html_response(
-            outputs["legal"], outputs["draft"], outputs["review"], outputs["logs"]
+        # -------------------
+        # CrewAI Pipeline
+        # -------------------
+        legal_task = Task(
+            description=f"List legal requirements for {ctype} in {country}.",
+            agent=law_expert,
+            expected_output="A bullet list of legal requirements."
         )
+        draft_task = Task(
+            description=f"Draft a full {ctype} for {country}, based on user prompt:\n{prompt}",
+            agent=contract_connoisseur,
+            expected_output="A full draft contract."
+        )
+        review_task = Task(
+            description="Review and refine the draft, adding compliance notes.",
+            agent=proofreader,
+            expected_output="Reviewed contract + compliance notes."
+        )
+
+        crew = Crew(
+            agents=[law_expert, contract_connoisseur, proofreader],
+            tasks=[legal_task, draft_task, review_task],
+            process=Process.sequential,
+            verbose=True,
+        )
+
+        try:
+            logging.info("Starting CrewAI pipeline...")
+            result = crew.kickoff(inputs={"prompt": prompt})
+            outputs = {"legal": "", "draft": "", "review": "", "logs": ""}
+
+            tos = getattr(result, "tasks_output", None)
+            if isinstance(tos, list):
+                for i, t in enumerate(tos):
+                    raw = getattr(t, "raw", None) or str(t)
+                    if i == 0: 
+                        outputs["legal"] = raw
+                        logging.info(f"Legal requirements generated: {len(raw)} characters")
+                    elif i == 1: 
+                        outputs["draft"] = raw
+                        logging.info(f"Draft contract generated: {len(raw)} characters")
+                    elif i == 2: 
+                        outputs["review"] = raw
+                        logging.info(f"Contract review completed: {len(raw)} characters")
+                outputs["logs"] = str(result)
+
+            if not outputs["review"]:
+                outputs["review"] = getattr(result, "raw", str(result))
+
+            logging.info("Pipeline completed successfully")
+            return build_html_response(
+                outputs["legal"], outputs["draft"], outputs["review"], outputs["logs"]
+            )
+        except Exception as e:
+            logging.exception("Pipeline failed: %s", e)
+            error_msg = f"An error occurred during contract generation: {str(e)}"
+            return build_html_response(
+                error_msg, 
+                f"Unable to generate draft for: {prompt}", 
+                "Review failed due to generation error", 
+                f"Pipeline error: {str(e)}"
+            )
     except Exception as e:
-        logging.exception("Pipeline failed: %s", e)
-        error_msg = f"An error occurred during contract generation: {str(e)}"
-        return build_html_response(
-            error_msg, 
-            f"Unable to generate draft for: {prompt}", 
-            "Review failed due to generation error", 
-            f"Pipeline error: {str(e)}"
+        logging.exception("Request processing failed: %s", e)
+        return HTMLResponse(
+            f"<p>Error processing request: {str(e)}</p>",
+            status_code=500,
         )
