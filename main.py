@@ -67,10 +67,28 @@ proofreader = Agent(
 # -------------------
 app = FastAPI(title="Contract Generator Backend", version="1.0.0")
 
-WP_ORIGIN = os.getenv("WP_ORIGIN", "*")
+# CORS configuration for production
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+RENDER_URL = os.getenv("RENDER_URL", "https://your-frontend-name.onrender.com")
+
+# Allow both configured origins and common development origins
+allowed_origins = [
+    FRONTEND_URL,
+    RENDER_URL,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "https://7f4e3bc76888.ngrok-free.app",
+    "https://*.ngrok-free.app"  # Allow any ngrok subdomain
+]
+
+# Remove any None values and duplicates
+allowed_origins = list(set([origin for origin in allowed_origins if origin]))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[WP_ORIGIN] if WP_ORIGIN != "*" else ["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -100,7 +118,9 @@ def root():
 
 @app.get("/health", response_class=PlainTextResponse)
 def health():
-    return "ok"
+    """Health check endpoint for Render monitoring"""
+    import datetime
+    return f"Contract Generator Backend is healthy - {datetime.datetime.now().isoformat()}"
 
 @app.get("/get-contract-types", response_class=HTMLResponse)
 def get_contract_types(contract_category: str):
@@ -125,17 +145,22 @@ def get_contract_types(contract_category: str):
 
 @app.post("/generate", response_class=HTMLResponse)
 async def generate_contract(request: Request):
-    data = await request.json()
-    prompt = data.get("prompt", "")
-    country = data.get("country", "")
-    category = data.get("contract_category", "")
-    ctype = data.get("contract_type", "")
+    try:
+        data = await request.json()
+        prompt = data.get("prompt", "")
+        country = data.get("country", "")
+        category = data.get("contract_category", "")
+        ctype = data.get("contract_type", "")
 
-    if not (prompt and country and category and ctype):
-        return HTMLResponse(
-            "<p>Missing required fields (prompt, country, contract_category, contract_type).</p>",
-            status_code=400,
-        )
+        # Log the request for debugging
+        logging.info(f"Contract generation request: category={category}, type={ctype}, country={country}")
+
+        if not (prompt and country and category and ctype):
+            logging.warning(f"Missing required fields: prompt={bool(prompt)}, country={bool(country)}, category={bool(category)}, type={bool(ctype)}")
+            return HTMLResponse(
+                "<p>Missing required fields (prompt, country, contract_category, contract_type).</p>",
+                status_code=400,
+            )
 
     # -------------------
     # CrewAI Pipeline
@@ -164,6 +189,7 @@ async def generate_contract(request: Request):
     )
 
     try:
+        logging.info("Starting CrewAI pipeline...")
         result = crew.kickoff(inputs={"prompt": prompt})
         outputs = {"legal": "", "draft": "", "review": "", "logs": ""}
 
@@ -171,19 +197,30 @@ async def generate_contract(request: Request):
         if isinstance(tos, list):
             for i, t in enumerate(tos):
                 raw = getattr(t, "raw", None) or str(t)
-                if i == 0: outputs["legal"] = raw
-                elif i == 1: outputs["draft"] = raw
-                elif i == 2: outputs["review"] = raw
+                if i == 0: 
+                    outputs["legal"] = raw
+                    logging.info(f"Legal requirements generated: {len(raw)} characters")
+                elif i == 1: 
+                    outputs["draft"] = raw
+                    logging.info(f"Draft contract generated: {len(raw)} characters")
+                elif i == 2: 
+                    outputs["review"] = raw
+                    logging.info(f"Contract review completed: {len(raw)} characters")
             outputs["logs"] = str(result)
 
         if not outputs["review"]:
             outputs["review"] = getattr(result, "raw", str(result))
 
+        logging.info("Pipeline completed successfully")
         return build_html_response(
             outputs["legal"], outputs["draft"], outputs["review"], outputs["logs"]
         )
     except Exception as e:
         logging.exception("Pipeline failed: %s", e)
+        error_msg = f"An error occurred during contract generation: {str(e)}"
         return build_html_response(
-            f"(Error) {e}", f"(Prompt) {prompt}", "(No review)", "Pipeline crashed"
+            error_msg, 
+            f"Unable to generate draft for: {prompt}", 
+            "Review failed due to generation error", 
+            f"Pipeline error: {str(e)}"
         )
